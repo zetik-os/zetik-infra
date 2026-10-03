@@ -17,10 +17,6 @@ for comp in zetik-core zetik-artwork zetik-xfce zetik-bspwm zetik-boot zetik-log
     [ -f "$st" ] || continue
     sh "$st" >/dev/null 2>&1 && echo "shell test ok: $(basename "$st")" || { echo "shell test FAIL: $st"; rc=1; }
   done
-  # zetik-boot ships generated GRUB assets; produce them before packaging
-  if [ "$comp" = "zetik-boot" ]; then
-    python3 "$top/zetik-boot/bin/gen-grub-assets" >/dev/null || rc=1
-  fi
   # zetik-login ships a generated greeter background
   if [ "$comp" = "zetik-login" ]; then
     python3 "$top/zetik-login/bin/gen-background" >/dev/null || rc=1
