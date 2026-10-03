@@ -1,0 +1,5 @@
+zetik-john (1.9.0+jumbo1-zetik1) rolling; urgency=medium
+
+  * Package John the Ripper jumbo from upstream for Zetik OS.
+
+ -- Zetik OS Maintainers <maintainers@zetik.invalid>  Thu, 02 Oct 2026 12:00:00 +0000

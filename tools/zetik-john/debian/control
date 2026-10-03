@@ -1,0 +1,19 @@
+Source: zetik-john
+Section: admin
+Priority: optional
+Maintainer: Zetik OS Maintainers <maintainers@zetik.invalid>
+Build-Depends: debhelper-compat (= 13), libssl-dev, zlib1g-dev, libgmp-dev,
+ libpcap-dev, libbz2-dev, yasm, pkg-config
+Standards-Version: 4.7.0
+Homepage: https://www.openwall.com/john/
+
+Package: zetik-john
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Provides: john
+Conflicts: john
+Replaces: john
+Description: John the Ripper password auditor, jumbo edition
+ Builds the community jumbo edition of John the Ripper from upstream source.
+ Provides a newer john than Debian ships. Installs the run tree under
+ /usr/lib/zetik-john and a john command in /usr/bin.

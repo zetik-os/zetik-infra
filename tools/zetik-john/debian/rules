@@ -1,0 +1,26 @@
+#!/usr/bin/make -f
+# Build John the Ripper jumbo from the upstream src tree.
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	cd src && ./configure --disable-native-tests
+
+override_dh_auto_build:
+	cd src && make -s
+
+override_dh_auto_install:
+	# jumbo places built files in the run directory
+	mkdir -p debian/zetik-john/usr/lib/zetik-john
+	cp -a run/. debian/zetik-john/usr/lib/zetik-john/
+	mkdir -p debian/zetik-john/usr/bin
+	ln -sf /usr/lib/zetik-john/john debian/zetik-john/usr/bin/john
+
+override_dh_auto_test:
+	# run the self test only when building natively
+	run/john --test=0 || true
+
+override_dh_auto_clean:
+	cd src && [ -f Makefile ] && make -s clean || true

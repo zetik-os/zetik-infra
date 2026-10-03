@@ -1,0 +1,19 @@
+# Per-tool update records. Keep in sync with zetik-core/data/catalog.json.
+schema: 1
+defaults:
+  packaging: debian
+  version_policy: follow-debian-testing
+  maintainer: "Zetik OS Maintainers"
+tools:
+  nmap:        {official_source: "https://nmap.org",            last_review: "2026-10-01"}
+  tshark:      {official_source: "https://www.wireshark.org",   last_review: "2026-10-01"}
+  sqlmap:      {official_source: "https://sqlmap.org",          last_review: "2026-10-01"}
+  gobuster:    {official_source: "https://github.com/OJ/gobuster",       last_review: "2026-10-01"}
+  ffuf:        {official_source: "https://github.com/ffuf/ffuf",         last_review: "2026-10-01"}
+  aircrack-ng: {official_source: "https://www.aircrack-ng.org",  last_review: "2026-10-01"}
+  radare2:     {official_source: "https://rada.re",              last_review: "2026-10-01"}
+  binwalk:     {official_source: "https://github.com/ReFirmLabs/binwalk", last_review: "2026-10-01"}
+  sleuthkit:   {official_source: "https://www.sleuthkit.org",    last_review: "2026-10-01"}
+  john:        {official_source: "https://www.openwall.com/john/", last_review: "2026-10-01", known_limitations: "Debian ships core, not jumbo"}
+  hashcat:     {official_source: "https://hashcat.net",          last_review: "2026-10-01"}
+  hydra:       {official_source: "https://github.com/vanhauser-thc/thc-hydra", last_review: "2026-10-01"}

@@ -1,0 +1,90 @@
+#!/bin/sh
+# Build an Architecture: all binary package with dpkg-deb from a debian/ tree.
+# Lab fallback for hosts without debhelper; release builds use dpkg-buildpackage.
+set -eu
+
+usage() { echo "usage: lab-build-deb SOURCE_DIR OUTPUT_DIR" >&2; exit 2; }
+[ $# -eq 2 ] || usage
+src=$(cd "$1" && pwd)
+mkdir -p "$2"
+out=$(cd "$2" && pwd)
+
+ctrl="$src/debian/control"
+[ -f "$ctrl" ] || { echo "error: $ctrl not found" >&2; exit 1; }
+
+# One binary package per source is supported here
+pkg=$(awk '/^Package:/{print $2; exit}' "$ctrl")
+version=$(head -n1 "$src/debian/changelog" | sed -n 's/^[^ ]* (\([^)]*\)).*/\1/p')
+[ -n "$pkg" ] && [ -n "$version" ] || { echo "error: cannot read package/version" >&2; exit 1; }
+
+stage=$(mktemp -d)
+trap 'rm -rf "$stage"' EXIT
+root="$stage/root"
+mkdir -p "$root/DEBIAN"
+
+# Apply debian/install lines: "SOURCE_GLOB DEST_DIR"
+if [ -f "$src/debian/install" ]; then
+  while read -r from dest; do
+    [ -n "$from" ] || continue
+    mkdir -p "$root/$dest"
+    found=0
+    for f in "$src"/$from; do
+      [ -e "$f" ] || continue
+      cp -a "$f" "$root/$dest/"
+      found=1
+    done
+    [ $found -eq 1 ] || { echo "error: no match for $from" >&2; exit 1; }
+  done < "$src/debian/install"
+fi
+
+# Mark executables and normalise permissions
+find "$root" -path "$root/DEBIAN" -prune -o -type d -exec chmod 0755 {} +
+find "$root" -path "$root/DEBIAN" -prune -o -type f -exec chmod 0644 {} +
+for d in usr/bin usr/sbin usr/libexec/zetik usr/lib/zetik/bin; do
+  [ -d "$root/$d" ] && find "$root/$d" -type f -exec chmod 0755 {} +
+done
+
+mkdir -p "$root/usr/share/doc/$pkg"
+cp "$src/debian/copyright" "$root/usr/share/doc/$pkg/copyright"
+gzip -9n -c "$src/debian/changelog" > "$root/usr/share/doc/$pkg/changelog.gz"
+# Only our two files, never any doc subdirectory shipped via debian/install
+chmod 0644 "$root/usr/share/doc/$pkg/copyright" "$root/usr/share/doc/$pkg/changelog.gz"
+
+for script in preinst postinst prerm postrm; do
+  if [ -f "$src/debian/$pkg.$script" ]; then
+    sed '/#DEBHELPER#/d' "$src/debian/$pkg.$script" > "$root/DEBIAN/$script"
+    chmod 0755 "$root/DEBIAN/$script"
+  fi
+done
+# Files under /etc are conffiles so local edits survive upgrades
+(cd "$root" && find etc -type f 2>/dev/null | sed 's|^|/|' | sort) > "$root/DEBIAN/conffiles"
+[ -s "$root/DEBIAN/conffiles" ] || rm -f "$root/DEBIAN/conffiles"
+
+size=$(du -sk --exclude=DEBIAN "$root" | cut -f1)
+awk -v pkg="$pkg" '
+  $0 ~ "^Package: " pkg "$" {on=1}
+  on && /^$/ {exit}
+  on {print}
+' "$ctrl" \
+  | sed -e 's/, *\${[a-z]*:[A-Za-z]*}//g' -e 's/\${[a-z]*:[A-Za-z]*}, *//g' \
+        -e 's/\${[a-z]*:[A-Za-z]*}//g' \
+  | sed -E 's/^(Depends|Recommends|Suggests|Pre-Depends): *,? *$//' \
+  | sed '/^$/d' \
+  | sed "/^Package:/a Version: $version" > "$stage/bin.ctrl"
+maint=$(awk '/^Maintainer:/{sub(/^Maintainer: /,""); print; exit}' "$ctrl")
+section=$(awk '/^Section:/{print $2; exit}' "$ctrl")
+{
+  cat "$stage/bin.ctrl" | sed '/^Description:/,$d'
+  echo "Maintainer: $maint"
+  echo "Section: ${section:-misc}"
+  echo "Priority: optional"
+  echo "Installed-Size: $size"
+  sed -n '/^Description:/,$p' "$stage/bin.ctrl"
+} > "$root/DEBIAN/control"
+
+(cd "$root" && find . -path ./DEBIAN -prune -o -type f -print | sed 's|^\./||' | sort \
+  | xargs -r md5sum) > "$root/DEBIAN/md5sums"
+
+deb="$out/${pkg}_${version}_all.deb"
+dpkg-deb --root-owner-group -Zxz --build "$root" "$deb" >/dev/null
+echo "$deb"

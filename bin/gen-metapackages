@@ -1,0 +1,90 @@
+#!/usr/bin/python3
+"""Generate Zetik tool group metapackages from the catalog.
+
+For each catalog group this writes a zetik-tools-<group> source tree whose only
+job is to depend on the tools in that group. Keeps the groups in sync with the
+catalog so there is a single source of truth.
+"""
+
+import argparse
+import json
+import os
+
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_CATALOG = os.path.join(os.path.dirname(HERE), "zetik-core", "data", "catalog.json")
+DATE = "Thu, 02 Oct 2026 12:00:00 +0000"
+
+
+def tool_dep(tool):
+    # Use the preferred package expression when the catalog sets one
+    return tool.get("prefer_package", tool["package"])
+
+
+def write(path, text):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(text)
+
+
+def gen_group(outdir, group, desc, deps):
+    pkg = f"zetik-tools-{group}"
+    base = os.path.join(outdir, pkg)
+    depline = ", ".join(deps)
+    write(os.path.join(base, "debian", "control"),
+          f"""Source: {pkg}
+Section: metapackages
+Priority: optional
+Maintainer: Zetik OS Maintainers <maintainers@zetik.invalid>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: {pkg}
+Architecture: all
+Depends: zetik-core, {depline}, ${{misc:Depends}}
+Description: Zetik OS {group} tool group
+ Installs the Zetik OS {group} tools: {desc}.
+ This is a metapackage; it only pulls in the tools of this group.
+""")
+    write(os.path.join(base, "debian", "changelog"),
+          f"""{pkg} (0.1.0) unstable; urgency=medium
+
+  * Initial release: {group} tool group generated from the catalog.
+
+ -- Zetik OS Maintainers <maintainers@zetik.invalid>  {DATE}
+""")
+    write(os.path.join(base, "debian", "rules"),
+          "#!/usr/bin/make -f\n%:\n\tdh $@\n")
+    os.chmod(os.path.join(base, "debian", "rules"), 0o755)
+    write(os.path.join(base, "debian", "source", "format"), "3.0 (native)\n")
+    write(os.path.join(base, "debian", "copyright"),
+          """Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: zetik-tools
+
+Files: *
+Copyright: 2026 Zetik OS Maintainers
+License: GPL-3.0-or-later
+ On Debian systems the full license text is in
+ /usr/share/common-licenses/GPL-3.
+""")
+    return pkg
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--catalog", default=DEFAULT_CATALOG)
+    ap.add_argument("--out", default=os.path.join(HERE, "metapackages"))
+    args = ap.parse_args()
+    with open(args.catalog, encoding="utf-8") as fh:
+        data = json.load(fh)
+    made = []
+    for group, desc in data["groups"].items():
+        deps = [tool_dep(t) for t in data["tools"] if t["group"] == group]
+        if not deps:
+            continue
+        made.append(gen_group(args.out, group, desc, deps))
+    print("generated:", ", ".join(made))
+
+
+if __name__ == "__main__":
+    main()

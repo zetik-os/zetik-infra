@@ -1,0 +1,11 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: john
+Source: https://github.com/openwall/john
+
+Files: *
+Copyright: 1996 Solar Designer and contributors
+License: GPL-2.0-or-later
+ John the Ripper is distributed under the GNU GPL version 2 or later, with
+ parts under more permissive terms. See the upstream doc/LICENSE for details.
+ On Debian systems the GPL version 2 text is in
+ /usr/share/common-licenses/GPL-2.
