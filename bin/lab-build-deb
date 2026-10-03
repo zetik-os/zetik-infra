@@ -40,7 +40,7 @@ fi
 # Mark executables and normalise permissions
 find "$root" -path "$root/DEBIAN" -prune -o -type d -exec chmod 0755 {} +
 find "$root" -path "$root/DEBIAN" -prune -o -type f -exec chmod 0644 {} +
-for d in usr/bin usr/sbin usr/libexec/zetik usr/lib/zetik/bin; do
+for d in usr/bin usr/sbin usr/libexec/zetik usr/lib/zetik/bin etc/grub.d; do
   [ -d "$root/$d" ] && find "$root/$d" -type f -exec chmod 0755 {} +
 done
 
